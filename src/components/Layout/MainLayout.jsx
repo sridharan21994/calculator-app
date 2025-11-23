@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, Button, theme, Input, Drawer, Grid } from 'antd';
+import { Layout, Menu, Button, theme, Drawer, Grid, AutoComplete, Input } from 'antd';
 import {
     MenuFoldOutlined,
     MenuUnfoldOutlined,
@@ -16,6 +16,8 @@ const { useBreakpoint } = Grid;
 const MainLayout = ({ children }) => {
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [options, setOptions] = useState([]);
+
     const {
         token: { colorBgContainer, borderRadiusLG },
     } = theme.useToken();
@@ -40,6 +42,38 @@ const MainLayout = ({ children }) => {
             })),
         }))
     ];
+
+    // Prepare search data
+    const allCalculators = categories.flatMap(cat =>
+        cat.links.map(link => ({
+            value: link.name,
+            label: (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>{link.name}</span>
+                    <span style={{ color: '#aaa', fontSize: '12px' }}>{cat.title}</span>
+                </div>
+            ),
+            path: link.path
+        }))
+    );
+
+    const handleSearch = (value) => {
+        if (!value) {
+            setOptions([]);
+            return;
+        }
+        const filtered = allCalculators.filter(calc =>
+            calc.value.toLowerCase().includes(value.toLowerCase())
+        );
+        setOptions(filtered);
+    };
+
+    const onSelect = (value, option) => {
+        navigate(option.path);
+        if (!screens.md) {
+            setMobileOpen(false);
+        }
+    };
 
     const handleMenuClick = (e) => {
         navigate(e.key);
@@ -132,7 +166,14 @@ const MainLayout = ({ children }) => {
                         }}
                     />
                     <div style={{ width: isMobile ? 'auto' : 300, flex: isMobile ? 1 : 'none', marginRight: isMobile ? 16 : 0 }}>
-                        <Input prefix={<SearchOutlined />} placeholder="Search..." />
+                        <AutoComplete
+                            style={{ width: '100%' }}
+                            options={options}
+                            onSelect={onSelect}
+                            onSearch={handleSearch}
+                        >
+                            <Input prefix={<SearchOutlined />} placeholder="Search calculators..." />
+                        </AutoComplete>
                     </div>
                 </Header>
                 <Content
