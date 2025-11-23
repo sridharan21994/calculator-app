@@ -1,24 +1,27 @@
-import React, { useState } from 'react';
-import { Layout, Menu, Button, theme, Input } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Layout, Menu, Button, theme, Input, Drawer, Grid } from 'antd';
 import {
     MenuFoldOutlined,
     MenuUnfoldOutlined,
     SearchOutlined,
     HomeOutlined
 } from '@ant-design/icons';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { categories } from '../../data/categories';
 import { motion } from 'framer-motion';
 
 const { Header, Sider, Content, Footer } = Layout;
+const { useBreakpoint } = Grid;
 
 const MainLayout = ({ children }) => {
     const [collapsed, setCollapsed] = useState(false);
+    const [mobileOpen, setMobileOpen] = useState(false);
     const {
         token: { colorBgContainer, borderRadiusLG },
     } = theme.useToken();
     const navigate = useNavigate();
     const location = useLocation();
+    const screens = useBreakpoint();
 
     // Flatten categories for menu items
     const items = [
@@ -40,6 +43,9 @@ const MainLayout = ({ children }) => {
 
     const handleMenuClick = (e) => {
         navigate(e.key);
+        if (!screens.md) {
+            setMobileOpen(false);
+        }
     };
 
     // Find current open keys based on location
@@ -49,48 +55,84 @@ const MainLayout = ({ children }) => {
         return category ? [category.path] : [];
     };
 
+    // Close mobile drawer on route change (handled in click, but good backup)
+    useEffect(() => {
+        if (!screens.md) {
+            setMobileOpen(false);
+        }
+    }, [location]);
+
+    const isMobile = !screens.md;
+
+    const MenuContent = (
+        <>
+            <div className="demo-logo-vertical" style={{ height: 64, margin: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <h1 style={{ color: 'white', fontSize: collapsed && !isMobile ? '12px' : '20px', margin: 0, transition: 'all 0.3s' }}>
+                    {collapsed && !isMobile ? 'Calc' : 'Calculator.net'}
+                </h1>
+            </div>
+            <Menu
+                theme="dark"
+                mode="inline"
+                selectedKeys={[location.pathname]}
+                defaultOpenKeys={getOpenKeys()}
+                items={items}
+                onClick={handleMenuClick}
+            />
+        </>
+    );
+
     return (
         <Layout style={{ minHeight: '100vh' }}>
-            <Sider trigger={null} collapsible collapsed={collapsed} width={280}
-                style={{
-                    overflow: 'auto',
-                    height: '100vh',
-                    position: 'fixed',
-                    left: 0,
-                    top: 0,
-                    bottom: 0,
-                    zIndex: 100,
-                    background: '#001529'
-                }}
-            >
-                <div className="demo-logo-vertical" style={{ height: 64, margin: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <h1 style={{ color: 'white', fontSize: collapsed ? '12px' : '20px', margin: 0, transition: 'all 0.3s' }}>
-                        {collapsed ? 'Calc' : 'Calculator.net'}
-                    </h1>
-                </div>
-                <Menu
-                    theme="dark"
-                    mode="inline"
-                    selectedKeys={[location.pathname]}
-                    defaultOpenKeys={getOpenKeys()}
-                    items={items}
-                    onClick={handleMenuClick}
-                />
-            </Sider>
-            <Layout style={{ marginLeft: collapsed ? 80 : 280, transition: 'all 0.2s' }}>
+            {/* Desktop Sider */}
+            {!isMobile && (
+                <Sider trigger={null} collapsible collapsed={collapsed} width={280}
+                    style={{
+                        overflow: 'auto',
+                        height: '100vh',
+                        position: 'fixed',
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        zIndex: 100,
+                        background: '#001529'
+                    }}
+                >
+                    {MenuContent}
+                </Sider>
+            )}
+
+            {/* Mobile Drawer */}
+            {isMobile && (
+                <Drawer
+                    placement="left"
+                    onClose={() => setMobileOpen(false)}
+                    open={mobileOpen}
+                    styles={{ body: { padding: 0, background: '#001529' } }}
+                    width={280}
+                    closable={false}
+                >
+                    {MenuContent}
+                </Drawer>
+            )}
+
+            <Layout style={{
+                marginLeft: isMobile ? 0 : (collapsed ? 80 : 280),
+                transition: 'all 0.2s'
+            }}>
                 <Header style={{ padding: 0, background: colorBgContainer, display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: 24 }}>
                     <Button
                         type="text"
-                        icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-                        onClick={() => setCollapsed(!collapsed)}
+                        icon={isMobile ? <MenuUnfoldOutlined /> : (collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />)}
+                        onClick={() => isMobile ? setMobileOpen(true) : setCollapsed(!collapsed)}
                         style={{
                             fontSize: '16px',
                             width: 64,
                             height: 64,
                         }}
                     />
-                    <div style={{ width: 300 }}>
-                        <Input prefix={<SearchOutlined />} placeholder="Search calculators..." />
+                    <div style={{ width: isMobile ? 'auto' : 300, flex: isMobile ? 1 : 'none', marginRight: isMobile ? 16 : 0 }}>
+                        <Input prefix={<SearchOutlined />} placeholder="Search..." />
                     </div>
                 </Header>
                 <Content
